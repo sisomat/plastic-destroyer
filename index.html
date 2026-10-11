@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plastic Destroyer - Selamatkan Bumi</title>
+    <!-- Tailwind CSS for modern UI styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for arcade style typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            overflow: hidden;
+            background-color: #09090b;
+        }
+        .arcade-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        /* Sleek 3D Button Effect */
+        .btn-3d {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.7), 0 12px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            transform: translateY(0);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+        .btn-3d:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 9px 0 rgba(0, 0, 0, 0.7), 0 16px 25px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+        .btn-3d:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.7), 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(6, 182, 212, 0.3); border-color: rgba(6, 182, 212, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(6, 182, 212, 0.8); border-color: rgba(6, 182, 212, 1); }
+        }
+        .dystopian-glow {
+            animation: pulse-glow 3s infinite;
+        }
+    </style>
+</head>
+<body class="text-white h-screen w-screen flex flex-col justify-between relative">
+
+    <!-- HUD Header Terstruktur -->
+    <header id="gameHeader" class="absolute top-2 left-1/2 transform -translate-x-1/2 w-[96%] max-w-5xl z-20 px-3 py-2 sm:px-4 sm:py-2.5 flex flex-wrap sm:flex-nowrap justify-between items-start bg-slate-950/85 backdrop-blur-2xl border border-slate-700/60 rounded-2xl shadow-2xl pointer-events-none hidden text-xs transition-all duration-300 gap-y-2">
+        
+        <!-- AREA KIRI (P1 Stats) -->
+        <div id="hudLeft" class="flex items-center gap-2 sm:gap-4 pointer-events-auto w-1/2 sm:w-auto shrink-0">
+            <!-- P1 Score Badge -->
+            <div id="p1ScoreBox" class="bg-slate-900/90 border border-emerald-500/60 rounded-xl px-2.5 py-1.5 shadow-xl flex items-center space-x-2 shrink-0">
+                <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400 font-black text-[10px] sm:text-xs arcade-font">P1</div>
+                <div class="flex flex-col justify-center">
+                    <span class="text-[8px] sm:text-[9px] text-emerald-400 block arcade-font tracking-wider font-bold">SKOR</span>
+                    <span id="scoreVal" class="text-xs sm:text-base font-black arcade-font text-emerald-300 leading-none mt-0.5">0</span>
+                </div>
+            </div>
+            
+            <!-- P1 HP (Tampil Khusus Mode Duel) -->
+            <div id="p1HpContainer" class="hidden flex-col items-start shrink-0">
+                <div class="flex items-center space-x-1.5 mb-1">
+                    <span class="text-[8px] sm:text-[10px] text-emerald-400 arcade-font font-bold">P1 HP</span>
+                    <span id="p1HpText" class="text-[9px] sm:text-xs font-black arcade-font text-emerald-300">100%</span>
+                </div>
+                <div class="w-16 sm:w-28 md:w-36 bg-slate-950 rounded-full h-2 sm:h-2.5 border border-emerald-500/50 p-0.5 overflow-hidden shadow-inner">
+                    <div id="p1HpBar" class="bg-gradient-to-r from-emerald-600 to-teal-400 h-full rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.8)]" style="width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AREA TENGAH (Level Badge) - Hilang di mode duel saat mobile -->
+        <div id="levelContainer" class="flex flex-col items-center justify-center pointer-events-auto mt-0.5 sm:mt-0 order-last sm:order-none w-full sm:w-auto">
+            <div id="levelBox" class="bg-slate-900/90 border border-sky-500/60 rounded-xl px-2.5 py-1.5 shadow-xl flex items-center space-x-2 shrink-0">
+                <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-sky-500/20 border border-sky-500/50 flex items-center justify-center text-sky-400 font-black text-[10px] sm:text-xs arcade-font">LV</div>
+                <div class="flex flex-col justify-center">
+                    <span class="text-[8px] sm:text-[9px] text-sky-400 block arcade-font tracking-wider font-bold">LEVEL</span>
+                    <span id="levelVal" class="text-xs sm:text-base font-black arcade-font text-sky-300 leading-none mt-0.5">1</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- AREA KANAN (Bumi HP / P2 Stats) -->
+        <div id="hudRight" class="flex flex-row-reverse items-center gap-2 sm:gap-4 pointer-events-auto w-1/2 sm:w-auto shrink-0 justify-start">
+            
+            <!-- P2 Score Badge -->
+            <div id="p2ScoreBox" class="bg-slate-900/90 border border-purple-500/60 rounded-xl px-2.5 py-1.5 shadow-xl hidden items-center space-x-2 shrink-0">
+                <div class="flex flex-col justify-center text-right">
+                    <span class="text-[8px] sm:text-[9px] text-purple-400 block arcade-font tracking-wider font-bold">SKOR</span>
+                    <span id="p2ScoreVal" class="text-xs sm:text-base font-black arcade-font text-purple-300 leading-none mt-0.5">0</span>
+                </div>
+                <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-purple-500/20 border border-purple-500/50 flex items-center justify-center text-purple-400 font-black text-[10px] sm:text-xs arcade-font">P2</div>
+            </div>
+
+            <!-- Bumi HP (Mode Solo) -->
+            <div id="earthHpContainer" class="flex flex-col items-end shrink-0">
+                <div class="flex items-center space-x-1.5 mb-1">
+                    <span class="text-[8px] sm:text-[10px] text-red-400 arcade-font font-bold">BUMI HP</span>
+                    <span id="earthHpText" class="text-[9px] sm:text-xs font-black arcade-font text-red-300">100%</span>
+                </div>
+                <div class="w-16 sm:w-28 md:w-36 bg-slate-950 rounded-full h-2 sm:h-2.5 border border-red-500/50 p-0.5 overflow-hidden shadow-inner">
+                    <div id="earthHpBar" class="bg-gradient-to-r from-red-600 via-orange-500 to-amber-400 h-full rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(239,68,68,0.8)]" style="width: 100%;"></div>
+                </div>
+            </div>
+
+            <!-- P2 HP (Mode Duel) -->
+            <div id="p2HpContainer" class="hidden flex-col items-end shrink-0">
+                <div class="flex items-center space-x-1.5 mb-1">
+                    <span class="text-[8px] sm:text-[10px] text-purple-400 arcade-font font-bold">P2 HP</span>
+                    <span id="p2HpText" class="text-[9px] sm:text-xs font-black arcade-font text-purple-300">100%</span>
+                </div>
+                <div class="w-16 sm:w-28 md:w-36 bg-slate-950 rounded-full h-2 sm:h-2.5 border border-purple-500/50 p-0.5 overflow-hidden shadow-inner">
+                    <div id="p2HpBar" class="bg-gradient-to-r from-purple-600 to-indigo-400 h-full rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(168,85,247,0.8)]" style="width: 100%;"></div>
+                </div>
+            </div>
+            
+        </div>
+    </header>
+
+    <!-- Question Container dengan posisi margin diatur (anti-kres) -->
+    <div id="questionContainer" class="absolute top-[96px] sm:top-[110px] left-1/2 transform -translate-x-1/2 z-20 pointer-events-none w-[90%] max-w-md text-center hidden">
+        <div class="bg-slate-950/95 border border-cyan-500/70 rounded-2xl py-2 sm:py-3 px-4 shadow-[0_0_30px_rgba(6,182,212,0.4)] backdrop-blur-xl dystopian-glow">
+            <p id="modeTitleIndicator" class="text-[8px] sm:text-[10px] text-cyan-300 uppercase tracking-widest arcade-font mb-1 font-bold">🎯 TARGET JAWABAN</p>
+            <div id="questionDisplay" class="text-2xl sm:text-4xl font-black arcade-font text-yellow-400 tracking-wider drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]">
+                MEMUAT SOAL...
+            </div>
+        </div>
+    </div>
+
+    <!-- Canvas Container -->
+    <main class="flex-grow relative w-full h-full">
+        <canvas id="gameCanvas"></canvas>
+    </main>
+
+    <!-- Prologue Screen -->
+    <div id="prologueScreen" class="absolute inset-0 z-50 bg-slate-950/95 flex flex-col items-center justify-center p-4 sm:p-6 text-center backdrop-blur-2xl">
+        <div class="max-w-md w-full bg-slate-900/90 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden dystopian-glow">
+            <div class="absolute -right-16 -top-16 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl"></div>
+            
+            <div class="flex justify-center space-x-2 mb-4 sm:mb-6">
+                <div id="dot0" class="w-3 h-2 rounded-full bg-cyan-400 transition-all duration-300"></div>
+                <div id="dot1" class="w-2 h-2 rounded-full bg-slate-700 transition-all duration-300"></div>
+                <div id="dot2" class="w-2 h-2 rounded-full bg-slate-700 transition-all duration-300"></div>
+            </div>
+
+            <div id="slideContent" class="min-h-[170px] flex flex-col justify-center items-center mb-6">
+                <div class="text-4xl sm:text-5xl mb-2 sm:mb-3">🌍⚠️</div>
+                <h2 id="slideTitle" class="text-xl sm:text-2xl font-black arcade-font text-cyan-400 mb-2">TAHUN 2150</h2>
+                <p id="slideDesc" class="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                    Bumi berada di ambang keruntuhan total. Lautan dan daratan tertutup lautan sampah plastik beracun akibat kelalaian umat manusia.
+                </p>
+            </div>
+
+            <div class="flex space-x-3">
+                <button id="skipPrologueBtn" class="flex-1 py-3 bg-slate-800/80 hover:bg-slate-700 text-slate-300 font-bold rounded-2xl btn-3d text-xs arcade-font tracking-wider">
+                    LEWATI
+                </button>
+                <button id="nextPrologueBtn" class="flex-1 py-3 bg-gradient-to-r from-cyan-600 to-emerald-600 hover:opacity-95 text-white font-black rounded-2xl btn-3d text-xs arcade-font tracking-wider">
+                    LANJUT ➔
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mode Selection Screen -->
+    <div id="modeScreen" class="absolute inset-0 z-50 bg-slate-950/95 hidden flex flex-col items-center justify-center p-6 text-center backdrop-blur-2xl">
+        <div class="max-w-md w-full bg-slate-900/90 border border-slate-700/80 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+            <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl"></div>
+            <h1 class="text-3xl sm:text-4xl font-black arcade-font text-cyan-400 mb-2">PILIH<br><span class="text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">MODE MISI</span></h1>
+            <p class="text-slate-300 text-xs sm:text-sm mb-8">Tentukan takdir penyelamatan bumi melalui mode solo atau duel kompetitif!</p>
+            
+            <div class="space-y-4">
+                <button id="soloModeBtn" class="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-sm rounded-2xl btn-3d arcade-font flex items-center justify-center space-x-3 tracking-wider">
+                    <span class="text-2xl">🛡️</span>
+                    <span>MODE SOLO</span>
+                </button>
+                <button id="duelModeBtn" class="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-sm rounded-2xl btn-3d arcade-font flex items-center justify-center space-x-3 tracking-wider">
+                    <span class="text-2xl">⚔️</span>
+                    <span>MODE DUEL (1v1)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen" class="absolute inset-0 z-50 bg-slate-950/95 hidden flex flex-col items-center justify-center p-6 text-center backdrop-blur-2xl">
+        <div class="max-w-md w-full bg-slate-900/95 border border-red-500/50 rounded-3xl p-8 shadow-[0_0_40px_rgba(239,68,68,0.3)]">
+            <div id="gameOverEmoji" class="text-6xl mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]">🌍💥</div>
+            <h2 id="gameOverTitle" class="text-2xl sm:text-3xl font-black arcade-font text-red-500 mb-2">BUMI TENGGELAM!</h2>
+            <p id="gameOverDesc" class="text-slate-300 text-xs sm:text-sm mb-6">Sampah plastik telah menguasai planet ini. Pertahanan gagal!</p>
+            
+            <div class="bg-slate-950/90 rounded-2xl p-4 mb-6 border border-slate-800/80 space-y-2.5 shadow-inner">
+                <div class="flex justify-between text-xs sm:text-sm">
+                    <span class="text-slate-400 arcade-font">Skor P1:</span>
+                    <span id="finalScore" class="font-black text-emerald-400 arcade-font">0</span>
+                </div>
+                <div id="finalP2ScoreRow" class="flex justify-between text-xs sm:text-sm hidden">
+                    <span class="text-slate-400 arcade-font">Skor P2:</span>
+                    <span id="finalP2Score" class="font-black text-purple-400 arcade-font">0</span>
+                </div>
+                <div class="flex justify-between text-xs sm:text-sm pt-2 border-t border-slate-800">
+                    <span class="text-slate-400 arcade-font">Gelombang (Level):</span>
+                    <span id="finalLevel" class="font-black text-cyan-400 arcade-font">1</span>
+                </div>
+            </div>
+
+            <div class="flex space-x-3">
+                <button id="menuBtn" class="flex-1 py-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl btn-3d text-xs arcade-font tracking-wider">
+                    MENU
+                </button>
+                <button id="restartBtn" class="flex-1 py-3.5 bg-gradient-to-r from-red-600 to-amber-600 text-white font-black rounded-2xl btn-3d text-xs arcade-font tracking-wider">
+                    COBA LAGI 🔄
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI Variables
+        const prologueScreen = document.getElementById('prologueScreen');
+        const modeScreen = document.getElementById('modeScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const gameHeader = document.getElementById('gameHeader');
+        const questionContainer = document.getElementById('questionContainer');
+        const levelContainer = document.getElementById('levelContainer');
+
+        const nextPrologueBtn = document.getElementById('nextPrologueBtn');
+        const skipPrologueBtn = document.getElementById('skipPrologueBtn');
+        const soloModeBtn = document.getElementById('soloModeBtn');
+        const duelModeBtn = document.getElementById('duelModeBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const menuBtn = document.getElementById('menuBtn');
+
+        const scoreValEl = document.getElementById('scoreVal');
+        const levelValEl = document.getElementById('levelVal');
+        const modeTitleIndicator = document.getElementById('modeTitleIndicator');
+        const questionDisplay = document.getElementById('questionDisplay');
+
+        // HUD Elements
+        const p1ScoreBox = document.getElementById('p1ScoreBox');
+        const p2ScoreBox = document.getElementById('p2ScoreBox');
+        const p2ScoreValEl = document.getElementById('p2ScoreVal');
+        
+        const earthHpContainer = document.getElementById('earthHpContainer');
+        const earthHpTextEl = document.getElementById('earthHpText');
+        const earthHpBarEl = document.getElementById('earthHpBar');
+
+        const p1HpContainer = document.getElementById('p1HpContainer');
+        const p1HpTextEl = document.getElementById('p1HpText');
+        const p1HpBarEl = document.getElementById('p1HpBar');
+
+        const p2HpContainer = document.getElementById('p2HpContainer');
+        const p2HpTextEl = document.getElementById('p2HpText');
+        const p2HpBarEl = document.getElementById('p2HpBar');
+
+        // Prologue
+        let currentSlide = 0;
+        const slides = [
+            { emoji: "🌍⚠️", title: "TAHUN 2150", desc: "Bumi berada di ambang keruntuhan total. Lautan dan daratan tertutup sampah plastik beracun." },
+            { emoji: "🏙️☠️", title: "KOTA KEBINASAAN", desc: "Metropolis kini menjadi reruntuhan suram yang diselimuti kabut toksik. Monster limbah plastik jatuh dari angkasa." },
+            { emoji: "🚀⚡", title: "MISI LASER DEFENDER", desc: "Senapan Laser Anti-Plastik diaktifkan! Arahkan meriam dengan mouse/sentuhan, lalu tembak jawaban yang tepat!" }
+        ];
+
+        function updatePrologueSlide() {
+            const slide = slides[currentSlide];
+            document.querySelector('#slideContent .text-4xl').textContent = slide.emoji;
+            document.getElementById('slideTitle').textContent = slide.title;
+            document.getElementById('slideDesc').textContent = slide.desc;
+            for (let i = 0; i < 3; i++) {
+                document.getElementById(`dot${i}`).className = (i === currentSlide) 
+                    ? "w-5 h-2 rounded-full bg-cyan-400 transition-all duration-300 shadow-[0_0_8px_#22d3ee]" 
+                    : "w-2 h-2 rounded-full bg-slate-700 transition-all duration-300";
+            }
+            nextPrologueBtn.textContent = (currentSlide === 2) ? "MULAI 🚀" : "LANJUT ➔";
+        }
+        nextPrologueBtn.addEventListener('click', () => {
+            currentSlide++;
+            if (currentSlide >= slides.length) { prologueScreen.classList.add('hidden'); modeScreen.classList.remove('hidden'); } 
+            else updatePrologueSlide();
+        });
+        skipPrologueBtn.addEventListener('click', () => {
+            prologueScreen.classList.add('hidden'); modeScreen.classList.remove('hidden');
+        });
+        updatePrologueSlide();
+
+        // Game State Variables
+        let gameMode = 'solo';
+        let score = 0, p2Score = 0, level = 1;
+        
+        let earthHp = 100; // Solo Mode
+        let p1Hp = 100;    // Duel Mode P1
+        let p2Hp = 100;    // Duel Mode P2
+        
+        let isPlaying = false, animationFrameId = null;
+        let plastics = [], particles = [], lasers = [];
+        let bgBuildings = [], fgBuildings = [];
+        let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+        
+        // SATU SOAL BERSAMA UNTUK KEDUA PEMAIN (Duel) / SOLO
+        let currentQuestion = { text: '', answer: 0 };
+
+        // Parallax City Generation
+        function generateCitySkyline() {
+            bgBuildings = []; fgBuildings = [];
+            let w = 0;
+            while (w < canvas.width + 100) {
+                let bw = Math.random() * 80 + 50;
+                let bh = Math.random() * 250 + 120;
+                bgBuildings.push({ x: w, w: bw, h: bh });
+                w += bw - 10;
+            }
+            w = -50;
+            while (w < canvas.width + 100) {
+                let bw = Math.random() * 60 + 40;
+                let bh = Math.random() * 150 + 80;
+                fgBuildings.push({ x: w, w: bw, h: bh, 
+                    neonColor: Math.random() > 0.5 ? '#06b6d4' : '#f59e0b',
+                    hasNeon: Math.random() > 0.4
+                });
+                w += bw - 5;
+            }
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            generateCitySkyline();
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        window.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left; mouseY = e.clientY - rect.top;
+        });
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                const rect = canvas.getBoundingClientRect();
+                mouseX = e.touches[0].clientX - rect.left; mouseY = e.touches[0].clientY - rect.top;
+            }
+        }, { passive: true });
+
+        const plasticTypes = ['🥤', '🛍️', '🧴', '🧃', '📦', '🥡'];
+
+        // FUNGSI UNIFIKASI: Menghasilkan 1 soal untuk mode Solo maupun Duel
+        function generateQuestion() {
+            let ops = ['+', '-', 'x'];
+            if (level >= 3) ops.push(':');
+            let op = ops[Math.floor(Math.random() * ops.length)];
+            let a, b, ans, txt;
+
+            if (op === '+') { a = Math.floor(Math.random() * (10 * level)) + 1; b = Math.floor(Math.random() * (10 * level)) + 1; ans = a + b; txt = `${a} + ${b} = ?`; }
+            else if (op === '-') { a = Math.floor(Math.random() * (15 * level)) + 5; b = Math.floor(Math.random() * a) + 1; ans = a - b; txt = `${a} - ${b} = ?`; }
+            else if (op === 'x') { let maxFactor = Math.min(10, 3 + level); a = Math.floor(Math.random() * maxFactor) + 1; b = Math.floor(Math.random() * 10) + 1; ans = a * b; txt = `${a} × ${b} = ?`; }
+            else if (op === ':') { b = Math.floor(Math.random() * 8) + 2; let multiplier = Math.floor(Math.random() * 10) + 1; a = b * multiplier; ans = multiplier; txt = `${a} ÷ ${b} = ?`; }
+
+            currentQuestion = { text: txt, answer: ans };
+            questionDisplay.textContent = txt;
+
+            spawnPlastics(ans);
+        }
+
+        // FUNGSI PEMBUATAN OBJEK IDENTIK
+        function spawnPlastics(correctAns) {
+            let count = Math.min(3 + Math.floor(level / 2), 5);
+            let itemsData = [];
+            let correctIndex = Math.floor(Math.random() * count);
+            
+            // Buat pola data acak SATU KALI agar bisa di-duplikasi (sinkron) untuk P1 dan P2
+            for (let i = 0; i < count; i++) {
+                let val;
+                if (i === correctIndex) val = correctAns;
+                else {
+                    let offset = (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random() * 6) + 1);
+                    val = correctAns + offset;
+                    if (val < 0) val = correctAns + Math.abs(offset) + 2;
+                    if (val === correctAns) val += 2;
+                }
+                itemsData.push({
+                    value: val,
+                    yOffset: -60 - (Math.random() * 120),
+                    speed: 0.8 + (level * 0.25) + Math.random() * 0.5,
+                    type: plasticTypes[Math.floor(Math.random() * plasticTypes.length)],
+                    wobble: Math.random() * Math.PI * 2
+                });
+            }
+
+            if (gameMode === 'duel') {
+                spawnSide('left', itemsData);
+                spawnSide('right', itemsData);
+            } else {
+                spawnSide('solo', itemsData);
+            }
+        }
+
+        function spawnSide(side, itemsData) {
+            let count = itemsData.length;
+            let minX = 0, maxX = canvas.width;
+            
+            if (gameMode === 'duel') {
+                if (side === 'left') { minX = 40; maxX = (canvas.width / 2) - 40; }
+                else { minX = (canvas.width / 2) + 40; maxX = canvas.width - 40; }
+            } else { minX = 60; maxX = canvas.width - 60; }
+
+            for (let i = 0; i < count; i++) {
+                let x = minX + (i * ((maxX - minX) / Math.max(1, count - 1)));
+                if (isNaN(x) || x < minX || x > maxX) x = (minX + maxX) / 2;
+                
+                plastics.push({
+                    x: x, 
+                    y: itemsData[i].yOffset,
+                    radius: 32, 
+                    value: itemsData[i].value, 
+                    type: itemsData[i].type,
+                    speed: itemsData[i].speed,
+                    side: side, 
+                    wobble: itemsData[i].wobble
+                });
+            }
+        }
+
+        function createExplosion(x, y, color = '#22c55e', big = false) {
+            let count = big ? 40 : 20;
+            for (let i = 0; i < count; i++) {
+                let angle = Math.random() * Math.PI * 2;
+                let speed = Math.random() * (big ? 9 : 5) + 2;
+                particles.push({
+                    x: x, y: y,
+                    vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                    radius: Math.random() * (big ? 6 : 4) + 1,
+                    color: color, alpha: 1, decay: Math.random() * 0.03 + 0.015
+                });
+            }
+        }
+
+        // Firing Logic (Tembakan)
+        window.addEventListener('pointerdown', (e) => {
+            if (!isPlaying) return;
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left; const clickY = e.clientY - rect.top;
+
+            let isP2Side = gameMode === 'duel' && clickX > canvas.width / 2;
+            let originX = gameMode === 'duel' ? (isP2Side ? canvas.width * 0.75 : canvas.width * 0.25) : canvas.width / 2;
+            let originY = canvas.height - 40;
+
+            let turretAngle = Math.atan2(clickY - originY, clickX - originX);
+            let barrelTipX = originX + Math.cos(turretAngle) * 45;
+            let barrelTipY = originY + Math.sin(turretAngle) * 45;
+
+            for (let i = plastics.length - 1; i >= 0; i--) {
+                let p = plastics[i];
+                if (gameMode === 'duel' && ((isP2Side && p.side !== 'right') || (!isP2Side && p.side !== 'left'))) continue;
+                
+                if (Math.hypot(clickX - p.x, clickY - p.y) < p.radius + 20) {
+                    
+                    createExplosion(barrelTipX, barrelTipY, isP2Side ? '#c084fc' : '#38bdf8', false);
+                    lasers.push({ x1: barrelTipX, y1: barrelTipY, x2: p.x, y2: p.y, alpha: 1, decay: 0.1, color: isP2Side ? '#d8b4fe' : '#7dd3fc' });
+                    
+                    let targetAns = currentQuestion.answer; // Jawaban target sama untuk P1 dan P2
+
+                    if (p.value === targetAns) {
+                        // JAWABAN BENAR: SPEED BATTLE WINNER!
+                        // Hancurkan SEMUA sampah di layar (kiri dan kanan dibersihkan)
+                        for (let j = plastics.length - 1; j >= 0; j--) {
+                            let otherP = plastics[j];
+                            createExplosion(otherP.x, otherP.y, isP2Side ? '#c084fc' : '#38bdf8', true);
+                        }
+                        plastics = []; // Kosongkan layar
+                        
+                        // Tambah skor bagi siapa yang cepat
+                        if (gameMode === 'duel') {
+                            if (isP2Side) { 
+                                p2Score += 25 * level; p2ScoreValEl.textContent = p2Score; 
+                            } else {
+                                score += 25 * level; scoreValEl.textContent = score;
+                            }
+                            // Level Up digabung dari max score atau total
+                            if ((score + p2Score) >= level * 60) { level++; levelValEl.textContent = level; }
+                        } else {
+                            score += 25 * level; scoreValEl.textContent = score;
+                            if (score >= level * 60) { level++; levelValEl.textContent = level; }
+                        }
+
+                        // Langsung munculkan soal sinkron baru
+                        generateQuestion();
+                        
+                    } else {
+                        // JAWABAN SALAH: Ledakan Merah dan Penalty HP untuk pihak yang salah tembak
+                        createExplosion(p.x, p.y, '#ef4444', true);
+                        
+                        if (gameMode === 'duel') {
+                            if (isP2Side) {
+                                p2Hp -= 15; if (p2Hp < 0) p2Hp = 0; updateHpUI();
+                                if (p2Hp <= 0) gameOver('P1 MENANG DUEL!');
+                                else plastics.splice(i, 1);
+                            } else {
+                                p1Hp -= 15; if (p1Hp < 0) p1Hp = 0; updateHpUI();
+                                if (p1Hp <= 0) gameOver('P2 MENANG DUEL!');
+                                else plastics.splice(i, 1);
+                            }
+                        } else {
+                            earthHp -= 15; if (earthHp < 0) earthHp = 0; updateHpUI();
+                            if (earthHp <= 0) gameOver('BUMI TENGGELAM!');
+                            else plastics.splice(i, 1);
+                        }
+                    }
+                    break;
+                }
+            }
+        });
+
+        function updateHpUI() {
+            if (gameMode === 'solo') {
+                earthHpTextEl.textContent = earthHp + '%'; 
+                earthHpBarEl.style.width = earthHp + '%';
+            } else {
+                p1HpTextEl.textContent = p1Hp + '%'; 
+                p1HpBarEl.style.width = p1Hp + '%';
+                p2HpTextEl.textContent = p2Hp + '%'; 
+                p2HpBarEl.style.width = p2Hp + '%';
+            }
+        }
+
+        // Realistic Turret Rendering
+        function drawRealisticTurret(x, y, targetX, targetY, primaryColor, glowColor) {
+            let angle = Math.atan2(targetY - y, targetX - x);
+            ctx.save();
+            ctx.translate(x, y);
+
+            ctx.rotate(angle);
+            ctx.fillStyle = '#1e293b'; 
+            ctx.fillRect(5, -12, 35, 24);
+            ctx.shadowColor = glowColor;
+            ctx.shadowBlur = 15;
+            ctx.fillStyle = glowColor;
+            ctx.fillRect(15, -4, 30, 8);
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(40, -14, 10, 28);
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, -12, 35, 24);
+            ctx.restore();
+
+            let baseGrad = ctx.createRadialGradient(x, y-10, 5, x, y, 35);
+            baseGrad.addColorStop(0, '#334155');
+            baseGrad.addColorStop(1, '#020617');
+            
+            ctx.beginPath();
+            ctx.arc(x, y, 32, Math.PI, 0, false);
+            ctx.fillStyle = baseGrad;
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(x, y, 20, Math.PI, 0, false);
+            ctx.strokeStyle = primaryColor;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(x - 38, y - 2, 76, 8);
+            ctx.strokeStyle = primaryColor;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x - 38, y - 2, 76, 8);
+        }
+
+        function updateGame() {
+            if (!isPlaying) return;
+
+            // 1. Sky & Background
+            let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            skyGrad.addColorStop(0, '#09090b');
+            skyGrad.addColorStop(0.5, '#1e1b4b');
+            skyGrad.addColorStop(1, '#022c22');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.beginPath();
+            ctx.arc(canvas.width * 0.8, canvas.height * 0.3, 40, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(252, 211, 77, 0.15)';
+            ctx.shadowColor = '#fcd34d'; ctx.shadowBlur = 50;
+            ctx.fill(); ctx.shadowBlur = 0;
+
+            ctx.fillStyle = '#0f172a'; 
+            for (let b of bgBuildings) ctx.fillRect(b.x, canvas.height - b.h - 40, b.w, b.h);
+
+            for (let b of fgBuildings) {
+                let fgGrad = ctx.createLinearGradient(0, canvas.height - b.h, 0, canvas.height);
+                fgGrad.addColorStop(0, '#1e293b');
+                fgGrad.addColorStop(1, '#020617');
+                ctx.fillStyle = fgGrad;
+                ctx.fillRect(b.x, canvas.height - b.h - 40, b.w, b.h);
+                
+                if (b.hasNeon) {
+                    ctx.fillStyle = b.neonColor;
+                    ctx.shadowColor = b.neonColor; ctx.shadowBlur = 10;
+                    ctx.fillRect(b.x + b.w/2 - 2, canvas.height - b.h - 20, 4, b.h * 0.6);
+                    ctx.shadowBlur = 0;
+                }
+            }
+
+            ctx.fillStyle = '#064e3b';
+            ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+            ctx.strokeStyle = '#10b981'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(0, canvas.height - 40); ctx.lineTo(canvas.width, canvas.height - 40); ctx.stroke();
+            
+            // Draw Turrets
+            if (gameMode === 'duel') {
+                drawRealisticTurret(canvas.width * 0.25, canvas.height - 40, mouseX, mouseY, '#0ea5e9', '#38bdf8');
+                drawRealisticTurret(canvas.width * 0.75, canvas.height - 40, mouseX, mouseY, '#a855f7', '#c084fc');
+                ctx.strokeStyle = 'rgba(51, 65, 85, 0.5)';
+                ctx.setLineDash([10, 15]); ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(canvas.width / 2, 120); ctx.lineTo(canvas.width / 2, canvas.height - 40); ctx.stroke();
+                ctx.setLineDash([]);
+            } else {
+                drawRealisticTurret(canvas.width / 2, canvas.height - 40, mouseX, mouseY, '#0ea5e9', '#38bdf8');
+            }
+
+            // Update & Render Plastics
+            for (let i = plastics.length - 1; i >= 0; i--) {
+                let p = plastics[i];
+                p.y += p.speed;
+                p.wobble += 0.05;
+                let currentX = p.x + Math.sin(p.wobble) * 3;
+
+                // Penalty jatuh ke tanah
+                if (p.y > canvas.height - 65) {
+                    createExplosion(p.x, canvas.height - 55, '#ef4444', true);
+                    if (gameMode === 'duel') {
+                        if (p.side === 'left') { 
+                            p1Hp -= 10; if (p1Hp < 0) p1Hp = 0; updateHpUI(); 
+                            if (p1Hp <= 0) { gameOver('P2 MENANG!'); return; } 
+                        } else { 
+                            p2Hp -= 10; if (p2Hp < 0) p2Hp = 0; updateHpUI(); 
+                            if (p2Hp <= 0) { gameOver('P1 MENANG!'); return; } 
+                        }
+                    } else {
+                        earthHp -= 10; if (earthHp < 0) earthHp = 0; updateHpUI(); 
+                        if (earthHp <= 0) { gameOver('BUMI TENGGELAM!'); return; }
+                    }
+                    plastics.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.translate(currentX, p.y);
+                ctx.shadowColor = p.side === 'right' ? '#a855f7' : '#0ea5e9';
+                ctx.shadowBlur = 20;
+
+                ctx.beginPath();
+                ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+                ctx.fill();
+                
+                ctx.strokeStyle = p.side === 'right' ? '#c084fc' : '#38bdf8';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                ctx.font = '24px sans-serif'; 
+                ctx.textAlign = 'center'; 
+                ctx.textBaseline = 'middle';
+                ctx.globalAlpha = 0.9;
+                ctx.fillText(p.type, 0, -4); 
+
+                ctx.shadowColor = '#000000';
+                ctx.shadowBlur = 4;
+                ctx.fillStyle = '#facc15'; 
+                ctx.font = '900 16px Orbitron, sans-serif';
+                ctx.fillText(p.value, 0, 16); 
+                ctx.restore();
+            }
+
+            // Jika semua sampah terhapus karena kena penalti tanah (wave habis)
+            if (plastics.length === 0 && isPlaying) {
+                generateQuestion();
+            }
+
+            // Update & Render Lasers
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                let l = lasers[i];
+                let angle = Math.atan2(l.y2 - l.y1, l.x2 - l.x1);
+                let beamWidth = 10;
+                
+                ctx.save();
+                ctx.globalAlpha = l.alpha;
+                ctx.shadowColor = l.color; 
+                ctx.shadowBlur = 20;
+                
+                ctx.fillStyle = l.color;
+                ctx.beginPath();
+                ctx.lineTo(l.x1 + Math.cos(angle - Math.PI/2) * beamWidth/2, l.y1 + Math.sin(angle - Math.PI/2) * beamWidth/2);
+                ctx.lineTo(l.x2, l.y2); 
+                ctx.lineTo(l.x1 + Math.cos(angle + Math.PI/2) * beamWidth/2, l.y1 + Math.sin(angle + Math.PI/2) * beamWidth/2);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                ctx.lineTo(l.x1 + Math.cos(angle - Math.PI/2) * (beamWidth/3), l.y1 + Math.sin(angle - Math.PI/2) * (beamWidth/3));
+                ctx.lineTo(l.x2, l.y2);
+                ctx.lineTo(l.x1 + Math.cos(angle + Math.PI/2) * (beamWidth/3), l.y1 + Math.sin(angle + Math.PI/2) * (beamWidth/3));
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+
+                l.alpha -= l.decay;
+                if (l.alpha <= 0) lasers.splice(i, 1);
+            }
+
+            // Update Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let pt = particles[i];
+                pt.x += pt.vx; pt.y += pt.vy; pt.alpha -= pt.decay;
+                ctx.save();
+                ctx.globalAlpha = Math.max(pt.alpha, 0);
+                ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+                ctx.fillStyle = pt.color; ctx.shadowColor = pt.color; ctx.shadowBlur = 10;
+                ctx.fill();
+                ctx.restore();
+                if (pt.alpha <= 0) particles.splice(i, 1);
+            }
+
+            animationFrameId = requestAnimationFrame(updateGame);
+        }
+
+        function startMode(selectedMode) {
+            gameMode = selectedMode;
+            score = 0; p2Score = 0; level = 1; earthHp = 100; p1Hp = 100; p2Hp = 100;
+            plastics = []; particles = []; lasers = [];
+
+            scoreValEl.textContent = score; levelValEl.textContent = level; 
+            updateHpUI();
+
+            modeScreen.classList.add('hidden'); gameOverScreen.classList.add('hidden');
+            gameHeader.classList.remove('hidden'); questionContainer.classList.remove('hidden');
+
+            if (gameMode === 'duel') {
+                p1HpContainer.classList.replace('hidden', 'flex');
+                p2ScoreBox.classList.replace('hidden', 'flex');
+                p2HpContainer.classList.replace('hidden', 'flex');
+                earthHpContainer.classList.replace('flex', 'hidden');
+                
+                levelContainer.className = 'hidden sm:flex flex-col items-center justify-center pointer-events-auto mt-0.5 sm:mt-0 order-last sm:order-none w-full sm:w-auto';
+                
+                modeTitleIndicator.textContent = '⚔️ SIAPA CEPAT DIA DAPAT: P1 VS P2';
+                generateQuestion(); 
+            } else {
+                p1HpContainer.classList.replace('flex', 'hidden');
+                p2ScoreBox.classList.replace('flex', 'hidden');
+                p2HpContainer.classList.replace('flex', 'hidden');
+                earthHpContainer.classList.replace('hidden', 'flex');
+                
+                levelContainer.className = 'flex flex-col items-center justify-center pointer-events-auto mt-0.5 sm:mt-0 order-last sm:order-none w-full sm:w-auto';
+                
+                modeTitleIndicator.textContent = '🎯 TEMBAK TARGET JAWABAN';
+                generateQuestion();
+            }
+
+            isPlaying = true;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            updateGame();
+        }
+
+        function gameOver(reasonTitle) {
+            isPlaying = false; if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+            document.getElementById('gameOverTitle').textContent = reasonTitle;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalLevel').textContent = level;
+
+            if (gameMode === 'duel') {
+                document.getElementById('finalP2ScoreRow').classList.remove('hidden');
+                document.getElementById('finalP2Score').textContent = p2Score;
+                document.getElementById('gameOverEmoji').textContent = '🏆';
+                document.getElementById('gameOverDesc').textContent = 'Pertarungan duel cepat selesai! Siapa jagoannya?';
+            } else {
+                document.getElementById('finalP2ScoreRow').classList.add('hidden');
+                document.getElementById('gameOverEmoji').textContent = '🌍💥';
+                document.getElementById('gameOverDesc').textContent = 'Sampah plastik telah menenggelamkan bumi...';
+            }
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        soloModeBtn.addEventListener('click', () => startMode('solo'));
+        duelModeBtn.addEventListener('click', () => startMode('duel'));
+        restartBtn.addEventListener('click', () => { gameOverScreen.classList.add('hidden'); startMode(gameMode); });
+        menuBtn.addEventListener('click', () => {
+            gameOverScreen.classList.add('hidden'); gameHeader.classList.add('hidden');
+            questionContainer.classList.add('hidden'); modeScreen.classList.remove('hidden');
+        });
+    </script>
+
+    <!-- Footer Developer -->
+    <footer id="devFooter" class="fixed bottom-0 left-0 w-full h-10 z-[60] flex items-center justify-center pointer-events-none px-3">
+        <p class="text-[10px] sm:text-xs text-slate-400/80 tracking-wide text-center truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            Developer by <span class="font-semibold text-cyan-300/90">Ifan Shovi, S.Pd</span>
+        </p>
+    </footer>
+
+</body>
+</html>
